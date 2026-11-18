@@ -1,78 +1,53 @@
-# Portafolio — Parte 7: panel administrativo React
+# Corrección del TypeScript CI — Portafolio Backend
 
-Esta entrega integra el panel administrativo en el frontend existente `Portafolio-Frontend` y añade la conexión con la API desarrollada en las Partes 1 a 6.
+Repositorio: `Jose20224/Portafolio-Backend`  
+Rama revisada: `main`  
+Commit del job fallido: `28fb76ffc0074f82c846b69601c14303d8cb073c`
 
-## Qué contiene
+## Causa real del fallo
 
-- Inicio de sesión administrativo y restauración de sesión mediante refresh token.
-- Rutas protegidas bajo `/admin`.
-- Resumen con contadores de proyectos, categorías, habilidades y mensajes nuevos.
-- Gestión del perfil profesional, visibilidad pública y carga de imagen principal.
-- Gestión de proyectos: crear, editar, publicar, retirar de publicación y eliminar.
-- Gestión de tecnologías, aspectos destacados y colaboradores por proyecto.
-- CRUD de categorías, habilidades y redes sociales.
-- Bandeja de mensajes con búsqueda, filtros, detalle y cambio de estado.
-- Biblioteca de imágenes para las carpetas `profile`, `projects` y `collaborators`.
-- Formulario público de contacto conectado a `POST /api/v1/contact/messages`.
-- Cliente HTTP y servicios JS acumulados de las partes anteriores.
+El log del job `Backend CI` confirmó:
 
-## Requisitos
+- TS1238 y TS1270 en cinco controladores porque `@Header('Cache-Control', 'no-store')` es un decorador de método, pero estaba aplicado a nivel de clase.
+- TS2724 porque la versión instalada de `@nestjs/common` no exporta `TooManyRequestsException`.
+- TS7006 porque los parámetros `origin` y `callback` de la función CORS estaban sin tipos explícitos.
 
-- El frontend existente con React 19, Vite 8, React Router 7, Tailwind CSS 4 y Framer Motion.
-- Node.js compatible con el proyecto actual.
-- Backend de las Partes 1 a 6 desplegado y con su `.env` configurado.
-- Cuenta creada en Supabase Auth y autorizada en `public.admin_users`.
+## Qué corrige el paquete
 
-No se añadieron dependencias npm nuevas.
+- Sustituye el decorador `@Header` de clase por `@UseInterceptors(new NoStoreInterceptor())` en los cinco controladores. Se conserva el encabezado `Cache-Control: no-store` en todas las rutas de esas clases.
+- Añade `NoStoreInterceptor` sin dependencias adicionales ni cambios de versión de NestJS.
+- Sustituye `TooManyRequestsException` por `HttpException` y `HttpStatus.TOO_MANY_REQUESTS` (429).
+- Define explícitamente los tipos de `origin` y `callback` según el contrato de CORS.
 
-## Rutas nuevas
+## Aplicación
 
-| Ruta | Acceso |
-|---|---|
-| `/admin/login` | Público, solo para iniciar sesión |
-| `/admin` | Administrador |
-| `/admin/perfil` | Administrador |
-| `/admin/proyectos` | Administrador |
-| `/admin/categorias` | Administrador |
-| `/admin/habilidades` | Administrador |
-| `/admin/redes` | Administrador |
-| `/admin/mensajes` | Administrador |
-| `/admin/medios` | Administrador |
+Extrae el ZIP. Abre PowerShell en la raíz del repositorio y ejecuta el script por su ruta:
 
-El panel no muestra el Navbar ni el Footer públicos. No modifica las rutas públicas de inicio, proyectos o detalle.
-
-## Variables de entorno del frontend
-
-Crear `.env.local` a partir de `.env.example`:
-
-```env
-VITE_API_BASE_URL=http://localhost:3000/api/v1
+```powershell
+node ./apply-fix.mjs
 ```
 
-En Vercel, definir `VITE_API_BASE_URL` con la URL desplegada del backend, incluyendo `/api/v1`, y volver a desplegar el frontend.
+O si extrajiste el paquete fuera de la raíz:
 
-## Integración necesaria del Backend
+```powershell
+node "C:\ruta\al\paquete\apply-fix.mjs"
+```
 
-La revisión del código acumulado encontró que `backend/src/admin-portfolio/admin-portfolio.module.ts` no estaba importado en `backend/src/app.module.ts`. Sin ese import, las rutas `/api/v1/admin/portfolio/*` devuelven 404 aunque los controllers y services existan.
+El script valida que encuentre una sola coincidencia para cada cambio y se detiene si el código del repositorio no coincide con la versión revisada. Después revisa `git diff`.
 
-Este paquete incluye el archivo corregido en:
+## Sobre `npm ci`
 
-`backend-patch/src/app.module.ts`
+La rama consultada no contiene `backend/package-lock.json` (la consulta del archivo devolvió 404). Por eso `npm ci` no puede ejecutarse todavía de forma correcta. El job fallido hizo `npm install --include=dev`, terminó la instalación correctamente y luego falló en `npm run typecheck`.
 
-Copiarlo sobre:
+Primera validación en tu equipo, desde `backend`:
 
-`Portafolio-Backend/backend/src/app.module.ts`
+```powershell
+npm install --include=dev
+npm run typecheck
+npm run build
+npm test
+```
 
-La corrección importa `AdminPortfolioModule`. No modifica el esquema de Supabase.
+`npm install` generará `backend/package-lock.json`. Revisa que se haya creado y agrégalo al repositorio. A partir del siguiente commit, podrás reemplazar el paso de instalación del workflow por `npm ci`.
 
-## Límites funcionales
-
-- La marca `replied` de un mensaje es un estado de seguimiento; el sistema no envía correos automáticamente.
-- Los archivos que continúan asociados al perfil o a un proyecto no pueden eliminarse desde la biblioteca.
-- Los nuevos proyectos se guardan como borradores y deben publicarse explícitamente.
-- La vista pública existente conserva los componentes de diseño. La carga dinámica completa del contenido público desde las rutas `/portfolio/*` queda para una mejora separada; esta parte conecta el panel administrativo y el formulario de contacto.
-- No se incluyó gestión de usuarios administradores; esa acción queda reservada al flujo de propietario y no es necesaria para el CRUD de contenido.
-
-## Verificación
-
-La sintaxis JSX/JavaScript y las rutas relativas se verifican en la entrega. El build completo con Vite debe ejecutarse en el repositorio real, con sus dependencias instaladas y las variables configuradas.
+No se cambian las versiones existentes de NestJS ni TypeScript.
