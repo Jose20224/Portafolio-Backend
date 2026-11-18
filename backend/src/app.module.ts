@@ -5,6 +5,7 @@ import { AdminModule } from './admin/admin.module.js';
 import { AuthModule } from './auth/auth.module.js';
 import { HealthModule } from './health/health.module.js';
 import { SupabaseModule } from './supabase/supabase.module.js';
+import { PublicPortfolioModule } from './public-portfolio/public-portfolio.module.js';
 
 @Module({
   imports: [
@@ -18,6 +19,7 @@ import { SupabaseModule } from './supabase/supabase.module.js';
     AuthModule,
     AdminModule,
     HealthModule,
+    PublicPortfolioModule,
   ],
 })
 export class AppModule {}
