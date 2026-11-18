@@ -4,12 +4,13 @@ import {
   Get,
   HttpCode,
   HttpStatus,
-  Header,
   Post,
   Req,
   UseGuards,
+  UseInterceptors,
 } from '@nestjs/common';
 import { CurrentAdmin } from '../common/decorators/current-admin.decorator.js';
+import { NoStoreInterceptor } from '../common/interceptors/no-store.interceptor.js';
 import type { AuthenticatedRequest } from '../common/guards/supabase-auth.guard.js';
 import { SupabaseAuthGuard } from '../common/guards/supabase-auth.guard.js';
 import { AuthService } from './auth.service.js';
@@ -18,7 +19,7 @@ import { LoginDto } from './dto/login.dto.js';
 import { RefreshSessionDto } from './dto/refresh-session.dto.js';
 
 @Controller('auth')
-@Header('Cache-Control', 'no-store')
+@UseInterceptors(new NoStoreInterceptor())
 export class AuthController {
   constructor(private readonly authService: AuthService) {}
 

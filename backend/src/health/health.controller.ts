@@ -1,14 +1,15 @@
 import {
   Controller,
   Get,
-  Header,
   Logger,
   ServiceUnavailableException,
+  UseInterceptors,
 } from '@nestjs/common';
 import { SupabaseService } from '../supabase/supabase.service.js';
+import { NoStoreInterceptor } from '../common/interceptors/no-store.interceptor.js';
 
 @Controller('health')
-@Header('Cache-Control', 'no-store')
+@UseInterceptors(new NoStoreInterceptor())
 export class HealthController {
   private readonly logger = new Logger(HealthController.name);
 

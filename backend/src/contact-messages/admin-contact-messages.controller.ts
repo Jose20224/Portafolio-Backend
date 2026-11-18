@@ -1,15 +1,16 @@
 import {
   Controller,
   Get,
-  Header,
   Param,
   ParseUUIDPipe,
   Patch,
   Body,
   Query,
   UseGuards,
+  UseInterceptors,
 } from '@nestjs/common';
 import { CurrentAdmin } from '../common/decorators/current-admin.decorator.js';
+import { NoStoreInterceptor } from '../common/interceptors/no-store.interceptor.js';
 import { Roles } from '../common/decorators/roles.decorator.js';
 import { RolesGuard } from '../common/guards/roles.guard.js';
 import { SupabaseAuthGuard } from '../common/guards/supabase-auth.guard.js';
@@ -20,7 +21,7 @@ import { ContactMessagesQueryDto, UpdateContactMessageStatusDto } from './dto/co
 @Controller('admin/contact-messages')
 @UseGuards(SupabaseAuthGuard, RolesGuard)
 @Roles('owner', 'editor')
-@Header('Cache-Control', 'no-store')
+@UseInterceptors(new NoStoreInterceptor())
 export class AdminContactMessagesController {
   constructor(private readonly messages: ContactMessagesService) {}
 

@@ -1,4 +1,4 @@
-import { Injectable, TooManyRequestsException } from '@nestjs/common';
+import { HttpException, HttpStatus, Injectable } from '@nestjs/common';
 
 type RateLimitRule = {
   key: string;
@@ -30,7 +30,7 @@ export class ContactRateLimitService {
       const cutoff = now - this.windowMs;
       const recent = (this.attempts.get(rule.key) ?? []).filter((timestamp) => timestamp > cutoff);
       if (recent.length >= rule.limit) {
-        throw new TooManyRequestsException(rule.message);
+        throw new HttpException(rule.message, HttpStatus.TOO_MANY_REQUESTS);
       }
       pending.push({ key: rule.key, timestamps: [...recent, now] });
     }

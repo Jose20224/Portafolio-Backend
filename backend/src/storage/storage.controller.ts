@@ -3,12 +3,13 @@ import {
   Controller,
   Delete,
   Get,
-  Header,
   Post,
   Query,
   UseGuards,
+  UseInterceptors,
 } from '@nestjs/common';
 import { CurrentAdmin } from '../common/decorators/current-admin.decorator.js';
+import { NoStoreInterceptor } from '../common/interceptors/no-store.interceptor.js';
 import { Roles } from '../common/decorators/roles.decorator.js';
 import { RolesGuard } from '../common/guards/roles.guard.js';
 import { SupabaseAuthGuard } from '../common/guards/supabase-auth.guard.js';
@@ -24,7 +25,7 @@ import { StorageService } from './storage.service.js';
 @Controller('admin/storage')
 @UseGuards(SupabaseAuthGuard, RolesGuard)
 @Roles('owner', 'editor')
-@Header('Cache-Control', 'no-store')
+@UseInterceptors(new NoStoreInterceptor())
 export class StorageController {
   constructor(private readonly storage: StorageService) {}
 
