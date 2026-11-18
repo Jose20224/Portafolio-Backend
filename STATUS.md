@@ -1,59 +1,40 @@
-# Estado del proyecto — Portafolio Backend (Partes 1–6)
+# Estado — Parte 7
 
-## Entrega acumulada
+## Entregado
 
-| Parte | Contenido | Estado |
-|---|---|---|
-| 1 | Estructura NestJS, configuración, cliente Supabase, health check | Preparada |
-| 2 | Login, refresh, logout, validación de JWT, roles owner/editor | Preparada |
-| 3 | Endpoints públicos del portafolio | Preparada |
-| 4 | CRUD administrativo de contenido y auditoría | Preparada |
-| 5 | Mensajes públicos de contacto, rate limit y bandeja administrativa | Preparada |
-| 6 | Supabase Storage: URL firmada, confirmación de imagen, listado y eliminación | Preparada |
-| 7 | Integración de todas las pantallas del panel administrativo React | Pendiente |
-| 8 | Pruebas integrales, hardening final, observabilidad y despliegue | Pendiente |
+- Panel React integrado en rutas `/admin/*` sin mostrar navegación o pie públicos.
+- Login administrativo y rutas protegidas.
+- Recuperación de sesión usando el refresh token ya implementado en el servicio de autenticación.
+- Wrapper de peticiones administrativas que intenta renovar una sesión una vez ante HTTP 401.
+- Dashboard con totales y accesos rápidos.
+- Edición del perfil y carga de imagen.
+- CRUD de categorías, habilidades y redes sociales.
+- Gestión de proyectos y de sus tecnologías, destacados y colaboradores.
+- Publicación y retirada de proyectos mediante endpoints independientes.
+- Bandeja de mensajes con búsqueda, filtro por estado, detalle, estadísticas y cambio de estado.
+- Biblioteca de imágenes por carpeta con carga, listado, copia de ruta y eliminación protegida.
+- Formulario público de contacto conectado al backend, con asunto opcional, honeypot y tiempo de inicio del formulario.
+- Servicios JS para todos los endpoints de administración usados en el panel.
+- `.env.example` con `VITE_API_BASE_URL`.
+- Corrección adicional de `backend/src/app.module.ts` para registrar `AdminPortfolioModule`.
 
-## Parte 6: detalles implementados
+## Hallazgo corregido
 
-- Rutas autenticadas para solicitar URL firmada de carga, confirmar, listar y eliminar imágenes.
-- API pública enriquecida con `hero_image_url`, `card_image_url`, `cover_image_url` y `avatar_url` a partir de las rutas del bucket.
-- Validación de los campos `*_image_path`/`avatar_path` para aceptar rutas relativas dentro de la carpeta correspondiente, no URLs arbitrarias.
-- Carpetas restringidas a `profile`, `projects` y `collaborators`.
-- MIME permitido: JPEG, PNG, WebP, AVIF y GIF.
-- Límite de tamaño: 8 MiB (coincide con la configuración verificada del bucket).
-- Nombre de archivo normalizado y prefijado con UUID; no se sobrescriben activos.
-- Confirmación de carga: descarga en servidor, límite de bytes y verificación de firma binaria.
-- Eliminación bloqueada si el path está enlazado en perfil, proyectos o colaboradores.
-- Auditoría en `admin_activity_logs` para acciones upload/delete.
-- Servicio JavaScript de frontend que hace el flujo de URL firmada + PUT directo a Storage + confirmación.
+El `backend/src/app.module.ts` incluido en el paquete anterior no importaba `AdminPortfolioModule`. El módulo existía, pero no estaba registrado en `AppModule`; por eso las rutas administrativas de contenido no podían atender solicitudes. Se incluye el reemplazo corregido en `backend-patch/src/app.module.ts`.
 
-## Supabase comprobado
+## Verificaciones realizadas
 
-Bucket existente: `portfolio-media`, público, límite 8,388,608 bytes, MIME `image/jpeg`, `image/png`, `image/webp`, `image/avif`, `image/gif`.
+- 22 archivos JavaScript/JSX/TypeScript procesados con TypeScript `transpileModule`: cero diagnósticos sintácticos.
+- 21 archivos frontend revisados para imports relativos: cero rutas faltantes dentro de los archivos entregados; las referencias del `App.jsx` a componentes públicos preexistentes corresponden al repositorio base.
+- El archivo `AppModule` corregido incluye el registro de `AdminPortfolioModule`.
+- No se añadieron dependencias npm ni se modificó `package.json` o `package-lock.json`.
+- No se incluyeron `.env` reales, claves ni tokens.
+- No se ha verificado ejecución contra un backend desplegado ni login real con Supabase.
+- El build de Vite debe ejecutarse en el repositorio real una vez copiados los archivos y configurada `VITE_API_BASE_URL`.
 
-Políticas ya existentes: `portfolio_media_admin_insert`, `portfolio_media_admin_update`, `portfolio_media_admin_delete`, `portfolio_media_admin_select`; todas acotan el bucket y las carpetas a `profile`, `projects`, `collaborators` y los roles `owner`/`editor`.
+## Pendiente para cerrar el proyecto
 
-No se modificó el esquema ni las políticas; por tanto, no se añadió migración SQL.
-
-## Validaciones de esta entrega
-
-- 39 archivos TypeScript: transpilation sintáctica con 0 diagnósticos.
-- Grafo de imports relativos: 0 rutas faltantes.
-- Archivos JavaScript del servicio de frontend: `node --check` correcto.
-- Archivos JSON: válidos.
-- Firmas binarias: 6/6 pruebas locales (JPEG, PNG, GIF, WebP, AVIF y contenido no válido).
-- `npm install --ignore-scripts --no-audit --no-fund` excedió 45 segundos y no llegó a completar; por ello no se ejecutó `npm run typecheck` ni `npm run build`.
-- No se ejecutó una carga real a Supabase, para no dejar archivos de prueba en el bucket del proyecto.
-
-## Pendiente antes de producción
-
-1. Ejecutar typecheck y build completos con Node 22.12+ y las dependencias instaladas.
-2. Probar el flujo real de carga con un usuario owner y otro editor, incluido un archivo inválido.
-3. Confirmar si el frontend ya almacena la ruta `path` en los campos de imagen, no URL completa.
-4. Agregar limpieza periódica de archivos huérfanos si aumenta el uso.
-5. Implementar las pantallas React en la Parte 7.
-6. Ejecutar pruebas de autorización, carga concurrente, límites y errores en la Parte 8.
-
-## GitHub
-
-No se pudo publicar esta entrega desde la integración. Al crear ramas en este repositorio, GitHub respondió `403 Resource not accessible by integration`. No se realizó ningún push ni commit.
+- Parte 8: pruebas end-to-end, revisión de seguridad, configuración final CORS/producción y despliegue.
+- Conectar también los componentes públicos de inicio, proyectos y detalle para que lean directamente las rutas públicas `GET /portfolio/*` en vez de conservar sus arreglos estáticos actuales. Esta tarea puede abordarse como mejora dentro de Parte 8.
+- Pruebas reales de carga y eliminación de imágenes en Storage.
+- Verificar que el backend esté desplegado con `AdminPortfolioModule` registrado.
