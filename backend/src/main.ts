@@ -3,6 +3,7 @@ import { Logger, ValidationPipe } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { NestFactory } from '@nestjs/core';
 import helmet from 'helmet';
+import { ApiRateLimitMiddleware } from './common/middleware/api-rate-limit.middleware.js';
 import { AppModule } from './app.module.js';
 
 async function bootstrap(): Promise<void> {
@@ -12,11 +13,12 @@ async function bootstrap(): Promise<void> {
 
   app.setGlobalPrefix('api/v1');
 
-  // Only trust the number of reverse-proxy hops configured by the operator.
-  // Keep 0 when the API is reached directly; set the exact trusted hop count
-  // when deployed behind a known ingress/load balancer.
+  // Trust only the number of reverse-proxy hops configured by the operator.
+  // Keep 0 for direct access; Render uses one ingress proxy by default.
   const trustProxyHops = config.getOrThrow<number>('TRUST_PROXY_HOPS');
-  app.getHttpAdapter().getInstance().set('trust proxy', trustProxyHops);
+  const expressApp = app.getHttpAdapter().getInstance();
+  expressApp.set('trust proxy', trustProxyHops);
+  expressApp.disable('x-powered-by');
 
   app.use(helmet());
 
@@ -30,7 +32,7 @@ async function bootstrap(): Promise<void> {
 
   app.enableCors({
     origin: (origin, callback) => {
-      // Requests without an Origin header include health checks and server calls.
+      // Requests without Origin include health checks and server-to-server calls.
       if (!origin || allowedOrigins.has(origin)) {
         callback(null, true);
         return;
@@ -40,7 +42,14 @@ async function bootstrap(): Promise<void> {
     credentials: false,
     methods: ['GET', 'HEAD', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
     allowedHeaders: ['Accept', 'Content-Type', 'Authorization'],
+    maxAge: 600,
   });
+
+  // Apply the limiter after CORS so browsers can read 429 responses from an
+  // allowed frontend origin. This store is process-local; use shared Redis or
+  // an edge limiter before running more than one API replica.
+  const rateLimiter = new ApiRateLimitMiddleware();
+  app.use(rateLimiter.use.bind(rateLimiter));
 
   app.useGlobalPipes(
     new ValidationPipe({
@@ -58,7 +67,7 @@ async function bootstrap(): Promise<void> {
 
   const port = config.getOrThrow<number>('PORT');
   await app.listen(port, '0.0.0.0');
-  logger.log(`Portafolio API listening on http://localhost:${port}/api/v1`);
+  logger.log(`Portafolio API listening on port ${port} with prefix /api/v1`);
 }
 
 void bootstrap();

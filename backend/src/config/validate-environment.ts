@@ -1,11 +1,19 @@
 type Environment = Record<string, unknown>;
 
 /**
- * Validate all required settings at startup so the API fails fast when it is
+ * Validates required settings at startup so the API fails fast when it is
  * misconfigured instead of failing on the first database request.
  */
 export function validateEnvironment(values: Environment): Environment {
   const errors: string[] = [];
+
+  const nodeEnv = typeof values.NODE_ENV === 'string' && values.NODE_ENV.trim()
+    ? values.NODE_ENV.trim()
+    : 'development';
+  if (!['development', 'test', 'production'].includes(nodeEnv)) {
+    errors.push('NODE_ENV must be development, test, or production.');
+  }
+  const isProduction = nodeEnv === 'production';
 
   const supabaseUrl = typeof values.SUPABASE_URL === 'string'
     ? values.SUPABASE_URL.trim()
@@ -25,6 +33,12 @@ export function validateEnvironment(values: Environment): Environment {
       const isLocalHost = ['localhost', '127.0.0.1'].includes(parsedUrl.hostname);
       if (parsedUrl.protocol !== 'https:' && !(isLocalHost && parsedUrl.protocol === 'http:')) {
         errors.push('SUPABASE_URL must use HTTPS (HTTP is allowed only for localhost).');
+      }
+      if (isProduction && isLocalHost) {
+        errors.push('SUPABASE_URL cannot point to localhost in production.');
+      }
+      if (parsedUrl.username || parsedUrl.password || parsedUrl.search || parsedUrl.hash) {
+        errors.push('SUPABASE_URL must not contain credentials, query parameters, or a fragment.');
       }
     } catch {
       errors.push('SUPABASE_URL must be a valid URL.');
@@ -51,15 +65,34 @@ export function validateEnvironment(values: Environment): Environment {
     errors.push('TRUST_PROXY_HOPS must be an integer between 0 and 10.');
   }
 
-  const frontendOrigins = typeof values.FRONTEND_ORIGINS === 'string' && values.FRONTEND_ORIGINS.trim()
+  const configuredOrigins = typeof values.FRONTEND_ORIGINS === 'string'
     ? values.FRONTEND_ORIGINS.trim()
-    : 'http://localhost:5173,http://127.0.0.1:5173';
+    : '';
 
-  for (const origin of frontendOrigins.split(',').map((value) => value.trim()).filter(Boolean)) {
+  if (isProduction && !configuredOrigins) {
+    errors.push('FRONTEND_ORIGINS is required in production.');
+  }
+
+  const frontendOrigins = configuredOrigins ||
+    'http://localhost:5173,http://127.0.0.1:5173';
+  const origins = frontendOrigins.split(',').map((value) => value.trim()).filter(Boolean);
+
+  if (origins.length === 0) {
+    errors.push('FRONTEND_ORIGINS must contain at least one exact origin.');
+  }
+
+  for (const origin of origins) {
     try {
       const parsedOrigin = new URL(origin);
-      if (!['http:', 'https:'].includes(parsedOrigin.protocol)) {
-        errors.push(`FRONTEND_ORIGINS contains an invalid origin: ${origin}`);
+      const isExactOrigin = parsedOrigin.origin === origin &&
+        !parsedOrigin.username && !parsedOrigin.password &&
+        !parsedOrigin.search && !parsedOrigin.hash;
+
+      if (!isExactOrigin || !['http:', 'https:'].includes(parsedOrigin.protocol)) {
+        errors.push(`FRONTEND_ORIGINS must contain only exact origins without paths: ${origin}`);
+      }
+      if (isProduction && parsedOrigin.protocol !== 'https:') {
+        errors.push(`FRONTEND_ORIGINS must use HTTPS in production: ${origin}`);
       }
     } catch {
       errors.push(`FRONTEND_ORIGINS contains an invalid URL: ${origin}`);
@@ -72,10 +105,11 @@ export function validateEnvironment(values: Environment): Environment {
 
   return {
     ...values,
+    NODE_ENV: nodeEnv,
     SUPABASE_URL: supabaseUrl,
     SUPABASE_PUBLISHABLE_KEY: publishableKey,
     SUPABASE_SECRET_KEY: secretKey,
-    FRONTEND_ORIGINS: frontendOrigins,
+    FRONTEND_ORIGINS: origins.join(','),
     PORT: port,
     TRUST_PROXY_HOPS: trustProxyHops,
   };

@@ -1,20 +1,32 @@
 import {
   Controller,
   Get,
+  Header,
   Logger,
   ServiceUnavailableException,
 } from '@nestjs/common';
 import { SupabaseService } from '../supabase/supabase.service.js';
 
 @Controller('health')
+@Header('Cache-Control', 'no-store')
 export class HealthController {
   private readonly logger = new Logger(HealthController.name);
 
   constructor(private readonly supabase: SupabaseService) {}
 
-  /** API liveness + Supabase connectivity check. */
-  @Get()
-  async getHealth() {
+  /** Liveness probe: confirms that the Node process and HTTP server respond. */
+  @Get('live')
+  getLiveness() {
+    return {
+      status: 'ok',
+      service: 'portafolio-api',
+      checkedAt: new Date().toISOString(),
+    };
+  }
+
+  /** Readiness probe: confirms that the API can query the Supabase database. */
+  @Get('ready')
+  async getReadiness() {
     const checkedAt = new Date().toISOString();
 
     try {
@@ -44,5 +56,11 @@ export class HealthController {
         },
       });
     }
+  }
+
+  /** Backward-compatible route used by existing health checks. */
+  @Get()
+  getHealth() {
+    return this.getReadiness();
   }
 }

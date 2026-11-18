@@ -1,40 +1,43 @@
-# Estado — Parte 7
+# Estado del proyecto Portafolio — cierre del backend (Parte 8)
 
-## Entregado
+## Partes preparadas
 
-- Panel React integrado en rutas `/admin/*` sin mostrar navegación o pie públicos.
-- Login administrativo y rutas protegidas.
-- Recuperación de sesión usando el refresh token ya implementado en el servicio de autenticación.
-- Wrapper de peticiones administrativas que intenta renovar una sesión una vez ante HTTP 401.
-- Dashboard con totales y accesos rápidos.
-- Edición del perfil y carga de imagen.
-- CRUD de categorías, habilidades y redes sociales.
-- Gestión de proyectos y de sus tecnologías, destacados y colaboradores.
-- Publicación y retirada de proyectos mediante endpoints independientes.
-- Bandeja de mensajes con búsqueda, filtro por estado, detalle, estadísticas y cambio de estado.
-- Biblioteca de imágenes por carpeta con carga, listado, copia de ruta y eliminación protegida.
-- Formulario público de contacto conectado al backend, con asunto opcional, honeypot y tiempo de inicio del formulario.
-- Servicios JS para todos los endpoints de administración usados en el panel.
-- `.env.example` con `VITE_API_BASE_URL`.
-- Corrección adicional de `backend/src/app.module.ts` para registrar `AdminPortfolioModule`.
+| Parte | Alcance | Estado |
+|---|---|---|
+| 1 | Base del backend, configuración y Supabase | Preparada |
+| 2 | Autenticación administrativa y roles | Preparada |
+| 3 | API pública del portafolio | Preparada |
+| 4 | CRUD administrativo del contenido | Preparada |
+| 5 | Mensajes públicos y bandeja administrativa | Preparada |
+| 6 | Carga y gestión de imágenes en Storage | Preparada |
+| 7 | Panel administrativo React y servicios API | Preparada |
+| 8 | Seguridad base, rate limiting, health checks, tests y despliegue | Parche preparado |
 
-## Hallazgo corregido
+## Entregado en Parte 8
 
-El `backend/src/app.module.ts` incluido en el paquete anterior no importaba `AdminPortfolioModule`. El módulo existía, pero no estaba registrado en `AppModule`; por eso las rutas administrativas de contenido no podían atender solicitudes. Se incluye el reemplazo corregido en `backend-patch/src/app.module.ts`.
+- Middleware de rate limit por IP: 120 solicitudes/minuto general y 10 intentos de login/15 minutos.
+- Se conserva el rate limit específico del formulario de contacto de Parte 5.
+- `GET /api/v1/health/live` y `GET /api/v1/health/ready`, manteniendo `/api/v1/health` como alias de readiness.
+- Validación de entorno reforzada: `NODE_ENV`, orígenes exactos, HTTPS requerido en producción y prohibición de Supabase localhost en producción.
+- `X-Powered-By` desactivado; Helmet, CORS y ValidationPipe global se conservan.
+- Pruebas Node.js para configuración, limitador y firmas binarias de imágenes.
+- GitHub Actions en `.github/workflows/backend-ci.yml`.
+- Blueprint de Render en `render.yaml` para construir y ejecutar el servicio desde `backend/`.
+- Guía de configuración de Render y Vercel en `DEPLOY_BACKEND.md`.
 
-## Verificaciones realizadas
+## Pendiente antes de considerar producción validada
 
-- 22 archivos JavaScript/JSX/TypeScript procesados con TypeScript `transpileModule`: cero diagnósticos sintácticos.
-- 21 archivos frontend revisados para imports relativos: cero rutas faltantes dentro de los archivos entregados; las referencias del `App.jsx` a componentes públicos preexistentes corresponden al repositorio base.
-- El archivo `AppModule` corregido incluye el registro de `AdminPortfolioModule`.
-- No se añadieron dependencias npm ni se modificó `package.json` o `package-lock.json`.
-- No se incluyeron `.env` reales, claves ni tokens.
-- No se ha verificado ejecución contra un backend desplegado ni login real con Supabase.
-- El build de Vite debe ejecutarse en el repositorio real una vez copiados los archivos y configurada `VITE_API_BASE_URL`.
+1. Aplicar el parche al repositorio y subirlo a GitHub.
+2. Ejecutar `npm install --include=dev`, lo que también generará `package-lock.json`; revisar y versionar ese lockfile.
+3. Conseguir ejecución verde de `npm run typecheck` y `npm test` en la máquina local o GitHub Actions.
+4. Configurar secretos en Render y desplegar el Blueprint.
+5. Confirmar `/api/v1/health/ready` con Supabase.
+6. Conectar `VITE_API_BASE_URL` en Vercel y ejecutar pruebas reales de login, formulario, CRUD y Storage.
+7. Después, hacer que las secciones públicas React consuman `GET /portfolio/*` en vez de datos estáticos.
 
-## Pendiente para cerrar el proyecto
+## Limitaciones técnicas conocidas
 
-- Parte 8: pruebas end-to-end, revisión de seguridad, configuración final CORS/producción y despliegue.
-- Conectar también los componentes públicos de inicio, proyectos y detalle para que lean directamente las rutas públicas `GET /portfolio/*` en vez de conservar sus arreglos estáticos actuales. Esta tarea puede abordarse como mejora dentro de Parte 8.
-- Pruebas reales de carga y eliminación de imágenes en Storage.
-- Verificar que el backend esté desplegado con `AdminPortfolioModule` registrado.
+- Los límites de solicitudes son por proceso. No son un contador distribuido; antes de escalar a varias instancias se debe sustituir por Redis o por un rate limiter del gateway/WAF.
+- Las pruebas añadidas son unitarias. No reemplazan las pruebas E2E contra Supabase ni una auditoría de seguridad externa.
+- No se añadió una migración SQL: la fase usa las tablas, RLS y bucket `portfolio-media` creados en fases anteriores.
+- El patch ZIP contiene solo los archivos añadidos o reemplazados de Parte 8; no incluye una copia duplicada de todo el backend.
