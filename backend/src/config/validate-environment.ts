@@ -42,8 +42,13 @@ export function validateEnvironment(values: Environment): Environment {
   }
 
   const port = Number(values.PORT ?? 3000);
+  const trustProxyHops = Number(values.TRUST_PROXY_HOPS ?? 0);
   if (!Number.isInteger(port) || port < 1 || port > 65535) {
     errors.push('PORT must be an integer between 1 and 65535.');
+  }
+
+  if (!Number.isInteger(trustProxyHops) || trustProxyHops < 0 || trustProxyHops > 10) {
+    errors.push('TRUST_PROXY_HOPS must be an integer between 0 and 10.');
   }
 
   const frontendOrigins = typeof values.FRONTEND_ORIGINS === 'string' && values.FRONTEND_ORIGINS.trim()
@@ -72,5 +77,6 @@ export function validateEnvironment(values: Environment): Environment {
     SUPABASE_SECRET_KEY: secretKey,
     FRONTEND_ORIGINS: frontendOrigins,
     PORT: port,
+    TRUST_PROXY_HOPS: trustProxyHops,
   };
 }

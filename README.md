@@ -1,24 +1,24 @@
-# Portafolio Backend — Parte 4
+# Portafolio Backend — Partes 1 a 6
 
-Esta entrega integra las Partes 1, 2 y 3 y agrega la **Parte 4: CRUD administrativo**. Contiene el backend NestJS completo del paquete, utilidades HTTP/API del frontend React y los `.gitignore`.
+Entrega acumulada del backend NestJS + Supabase para el portafolio profesional.
 
-## Incluye
+## Contenido
 
-- Autenticación administrativa Supabase Auth, renovación/cierre de sesión y guards de rol.
-- API pública de perfil, enlaces, habilidades, categorías y proyectos publicados.
-- CRUD administrativo de perfil, enlaces sociales, habilidades, categorías y proyectos.
-- CRUD individual de tecnologías, aspectos destacados y colaboradores de cada proyecto.
-- Acciones explícitas para publicar y retirar proyectos.
-- Registro de actividad en `admin_activity_logs`.
-- `.gitignore` de raíz y de `backend/`.
+1. Base del backend, configuración, health check y cliente Supabase.
+2. Autenticación y autorización administrativa `owner`/`editor`.
+3. API pública de perfil, enlaces, habilidades, categorías y proyectos publicados.
+4. CRUD administrativo de perfil, redes, habilidades, categorías, proyectos y relaciones.
+5. Formulario público de contacto, protección anti-spam y bandeja administrativa.
+6. Gestión de imágenes en Supabase Storage: URL firmada, carga, comprobación binaria, listado y eliminación segura. Los endpoints públicos entregan también las URLs públicas de perfil/proyectos/colaboradores.
 
-## Aplicar
+## Requisitos
 
-1. Descarga y extrae el ZIP.
-2. Copia/combina su contenido sobre la raíz local de `Portafolio-Backend`.
-3. Conserva el `.env` real local. No sobrescribas ni subas ese archivo.
-4. En `backend/`, configura `.env` tomando como base `.env.example`.
-5. Instala y valida:
+- Node.js 22.12 o superior.
+- Proyecto Supabase `PortaFolio_BD` con el esquema previamente creado.
+- Variables configuradas en `backend/.env` a partir de `backend/.env.example`.
+- Usuario administrador en `public.admin_users`.
+
+## Instalación
 
 ```powershell
 cd backend
@@ -28,12 +28,17 @@ npm run build
 npm run start:dev
 ```
 
-La API se sirve bajo `/api/v1`. Revisa `backend/README.md` para el detalle de rutas y ejemplos JSON.
+Prefijo de API: `/api/v1`.
 
-## Estado
+## Seguridad
 
-Revisa `STATUS.md` para ver qué partes están preparadas y qué falta antes de producción.
+La clave `SUPABASE_SECRET_KEY` se utiliza solo dentro del proceso backend. No copiarla a Vite ni a ninguna variable `VITE_`. Los endpoints administrativos exigen un access token de Supabase validado y rol vigente en `admin_users`.
 
-## GitHub
+El bucket `portfolio-media` es público porque aloja imágenes de contenido público. No usarlo para documentos privados o información confidencial.
 
-El archivo `GUIA_SUBIDA_MANUAL.md` contiene el procedimiento para crear una rama y subir la entrega si no se puede aplicar directamente desde la integración de GitHub.
+## Documentación
+
+- `backend/README.md`: partes 1–5.
+- `backend/README-PARTE-6.md`: bucket, rutas y flujo de carga.
+- `GUIA_SUBIDA_MANUAL.md`: integración en el repositorio y comandos Git.
+- `STATUS.md`: estado y validaciones.

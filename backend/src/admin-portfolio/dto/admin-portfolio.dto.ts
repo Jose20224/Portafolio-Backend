@@ -39,7 +39,7 @@ export class UpdateProfileDto {
   @IsOptional() @IsString() @MaxLength(2000)
   hero_description?: string;
 
-  @IsOptional() @IsString() @MaxLength(500)
+  @IsOptional() @IsString() @MaxLength(500) @Matches(/^profile\/[a-zA-Z0-9-]+\.(jpg|jpeg|png|webp|avif|gif)$/i)
   hero_image_path?: string | null;
 
   @IsOptional() @IsArray() @ArrayMaxSize(30) @IsString({ each: true })
@@ -190,10 +190,10 @@ export class CreateProjectDto {
   @IsString() @MaxLength(10000)
   full_description!: string;
 
-  @IsOptional() @IsString() @MaxLength(500)
+  @IsOptional() @IsString() @MaxLength(500) @Matches(/^projects\/[a-zA-Z0-9-]+\.(jpg|jpeg|png|webp|avif|gif)$/i)
   card_image_path?: string | null;
 
-  @IsOptional() @IsString() @MaxLength(500)
+  @IsOptional() @IsString() @MaxLength(500) @Matches(/^projects\/[a-zA-Z0-9-]+\.(jpg|jpeg|png|webp|avif|gif)$/i)
   cover_image_path?: string | null;
 
   @IsOptional() @IsUrl({ protocols: ['http', 'https'], require_protocol: true }) @MaxLength(2048)
@@ -234,10 +234,10 @@ export class UpdateProjectDto {
   @IsOptional() @IsString() @MaxLength(10000)
   full_description?: string;
 
-  @IsOptional() @IsString() @MaxLength(500)
+  @IsOptional() @IsString() @MaxLength(500) @Matches(/^projects\/[a-zA-Z0-9-]+\.(jpg|jpeg|png|webp|avif|gif)$/i)
   card_image_path?: string | null;
 
-  @IsOptional() @IsString() @MaxLength(500)
+  @IsOptional() @IsString() @MaxLength(500) @Matches(/^projects\/[a-zA-Z0-9-]+\.(jpg|jpeg|png|webp|avif|gif)$/i)
   cover_image_path?: string | null;
 
   @IsOptional() @IsUrl({ protocols: ['http', 'https'], require_protocol: true }) @MaxLength(2048)
@@ -327,7 +327,7 @@ export class CreateCollaboratorDto {
   @IsOptional() @IsString() @MaxLength(120)
   role?: string | null;
 
-  @IsOptional() @IsString() @MaxLength(500)
+  @IsOptional() @IsString() @MaxLength(500) @Matches(/^collaborators\/[a-zA-Z0-9-]+\.(jpg|jpeg|png|webp|avif|gif)$/i)
   avatar_path?: string | null;
 
   @IsOptional() @IsUrl({ protocols: ['http', 'https'], require_protocol: true }) @MaxLength(2048)
@@ -347,7 +347,7 @@ export class UpdateCollaboratorDto {
   @IsOptional() @IsString() @MaxLength(120)
   role?: string | null;
 
-  @IsOptional() @IsString() @MaxLength(500)
+  @IsOptional() @IsString() @MaxLength(500) @Matches(/^collaborators\/[a-zA-Z0-9-]+\.(jpg|jpeg|png|webp|avif|gif)$/i)
   avatar_path?: string | null;
 
   @IsOptional() @IsUrl({ protocols: ['http', 'https'], require_protocol: true }) @MaxLength(2048)

@@ -2,6 +2,8 @@ import { Injectable, InternalServerErrorException, NotFoundException } from '@ne
 import { SupabaseService } from '../supabase/supabase.service.js';
 import { ProjectsQueryDto } from './dto/projects-query.dto.js';
 
+const MEDIA_BUCKET = 'portfolio-media';
+
 const projectRelations = `
   *,
   category:project_categories(id,name,slug,label,description),
@@ -27,6 +29,23 @@ export class PublicPortfolioService {
     this.db = supabase.getServiceClient();
   }
 
+  private publicMediaUrl(path: string | null | undefined): string | null {
+    if (!path) return null;
+    return this.db.storage.from(MEDIA_BUCKET).getPublicUrl(path).data.publicUrl;
+  }
+
+  private addProjectMediaUrls(project: Record<string, any>) {
+    project.card_image_url = this.publicMediaUrl(project.card_image_path);
+    project.cover_image_url = this.publicMediaUrl(project.cover_image_path);
+    if (Array.isArray(project.collaborators)) {
+      project.collaborators = project.collaborators.map((collaborator: Record<string, any>) => ({
+        ...collaborator,
+        avatar_url: this.publicMediaUrl(collaborator.avatar_path),
+      }));
+    }
+    return project;
+  }
+
   async getProfile() {
     const { data, error } = await this.db
       .from('portfolio_profile')
@@ -36,7 +55,7 @@ export class PublicPortfolioService {
       .maybeSingle();
     if (error) throw new InternalServerErrorException('No fue posible cargar el perfil.');
     if (!data) throw new NotFoundException('El perfil público aún no está disponible.');
-    return data;
+    return { ...data, hero_image_url: this.publicMediaUrl(data.hero_image_path) };
   }
 
   async getSocialLinks() {
@@ -103,7 +122,9 @@ export class PublicPortfolioService {
     if (error) throw new InternalServerErrorException('No fue posible cargar los proyectos.');
     const total = count ?? 0;
     return {
-      items: (data ?? []).map((project: Record<string, any>) => sortChildren(project)),
+      items: (data ?? []).map((project: Record<string, any>) =>
+        this.addProjectMediaUrls(sortChildren(project)),
+      ),
       pagination: { page, limit, total, totalPages: Math.ceil(total / limit) },
     };
   }
@@ -117,6 +138,6 @@ export class PublicPortfolioService {
       .maybeSingle();
     if (error) throw new InternalServerErrorException('No fue posible cargar el proyecto.');
     if (!data) throw new NotFoundException('Proyecto no encontrado.');
-    return sortChildren(data as Record<string, any>);
+    return this.addProjectMediaUrls(sortChildren(data as Record<string, any>));
   }
 }

@@ -137,3 +137,81 @@ La API aplica validación global con `whitelist`, `forbidNonWhitelisted` y `tran
 ## Límites de esta parte
 
 Esta parte no implementa carga de imágenes/archivos; los campos `*_image_path` y `avatar_path` almacenan rutas/referencias que se gestionarán en la Parte 6. Tampoco implementa mensajes de contacto, gestión de administradores ni la conexión de las pantallas React; quedan para las partes siguientes.
+
+
+---
+
+# Parte 5: mensajes de contacto
+
+La Parte 5 utiliza la tabla existente `public.contact_messages`; no requiere una migración. Sus estados existentes son `new`, `read`, `replied` y `archived`.
+
+## Formulario público
+
+| Método | Ruta | Acceso | Uso |
+|---|---|---|---|
+| POST | `/api/v1/contact/messages` | Público | Recibir un mensaje de contacto (HTTP 202) |
+
+Cuerpo de ejemplo:
+
+```json
+{
+  "name": "Nombre de prueba",
+  "email": "prueba@example.com",
+  "subject": "Consulta",
+  "message": "Mensaje de prueba con al menos diez caracteres.",
+  "website": "",
+  "formStartedAt": 1795000000000
+}
+```
+
+- `name`: 2–100 caracteres después de recortar espacios.
+- `email`: correo válido, máximo 254 caracteres; se guarda en minúsculas.
+- `subject`: opcional, máximo 150 caracteres.
+- `message`: 10–5000 caracteres.
+- `website`: honeypot oculto; debe permanecer vacío.
+- `formStartedAt`: timestamp Unix en milisegundos (`Date.now()`) capturado al abrir/inicializar el formulario.
+
+El servidor valida los campos, normaliza texto y crea el registro con el estado por defecto `new`. Un campo honeypot rellenado o un envío en menos de 1.8 segundos recibe la misma respuesta genérica que un envío válido, pero no se guarda. Se limita a 5 mensajes por IP/hora y 3 por correo/hora. Al exceder el límite, responde HTTP 429.
+
+El rate limit se mantiene en memoria del proceso y usa huellas SHA-256 para las claves de IP/correo. No persiste esos datos, no comparte estado entre varias réplicas y se reinicia cuando el proceso se reinicia; para producción con varias instancias debe usarse un almacén distribuido como Redis o un limitador del gateway. Honeypot + tiempo + rate limit no sustituyen CAPTCHA/Turnstile ante ataques más sofisticados.
+
+## Bandeja administrativa
+
+Todas las rutas requieren `Authorization: Bearer <access_token>` y rol `owner` o `editor`.
+
+| Método | Ruta | Uso |
+|---|---|---|
+| GET | `/api/v1/admin/contact-messages` | Listar mensajes con filtros y paginación |
+| GET | `/api/v1/admin/contact-messages/stats` | Conteos total y por estado |
+| GET | `/api/v1/admin/contact-messages/:id` | Consultar detalle por UUID |
+| PATCH | `/api/v1/admin/contact-messages/:id/status` | Cambiar estado del mensaje |
+
+Filtros del listado: `page` (mínimo 1), `limit` (1–50), `status` y `q` (busca en nombre, correo y asunto). Ejemplo: `?status=new&page=1&limit=20&q=consulta`.
+
+Cuerpo para actualizar estado:
+
+```json
+{ "status": "read" }
+```
+
+La transición registra una entrada en `admin_activity_logs` con acción `status_change`. No se expone un endpoint para borrar mensajes. El estado `replied` indica que el administrador marcó la conversación como respondida; **no envía correo electrónico**.
+
+## Integración React
+
+Se agregaron estos módulos al cliente API:
+
+```js
+import { submitContactMessage } from './services/api/contact';
+import {
+  getContactMessages,
+  getContactMessageStats,
+  getContactMessage,
+  updateContactMessageStatus,
+} from './services/api/adminContactMessages';
+```
+
+El envío público no requiere token. Las funciones administrativas reciben `options` con `{ token, signal }` igual que el resto del cliente HTTP.
+
+## IP y proxy confiable
+
+`TRUST_PROXY_HOPS` controla la cantidad de proxies confiables que Express debe considerar al resolver `request.ip`. Por seguridad, el valor por defecto es `0`. Configura el número exacto de proxies confiables solo después de confirmar la arquitectura de red; un valor incorrecto puede permitir manipular la IP o agrupar a todos los visitantes detrás de un mismo proxy.

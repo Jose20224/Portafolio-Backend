@@ -11,6 +11,13 @@ async function bootstrap(): Promise<void> {
   const logger = new Logger('Bootstrap');
 
   app.setGlobalPrefix('api/v1');
+
+  // Only trust the number of reverse-proxy hops configured by the operator.
+  // Keep 0 when the API is reached directly; set the exact trusted hop count
+  // when deployed behind a known ingress/load balancer.
+  const trustProxyHops = config.getOrThrow<number>('TRUST_PROXY_HOPS');
+  app.getHttpAdapter().getInstance().set('trust proxy', trustProxyHops);
+
   app.use(helmet());
 
   const allowedOrigins = new Set(
